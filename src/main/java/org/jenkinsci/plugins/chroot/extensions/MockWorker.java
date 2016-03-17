@@ -24,6 +24,7 @@
 package org.jenkinsci.plugins.chroot.extensions;
 
 import com.google.common.collect.ImmutableList;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -122,6 +123,19 @@ public final class MockWorker extends ChrootWorker {
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
+        return exitCode == 0;
+    }
+    
+    @Override
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String sourcepackage) throws IOException, InterruptedException {
+
+        EnvVars environment = build.getEnvironment(listener);
+        sourcepackage = environment.expand(sourcepackage);
+        
+        ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
+                .add("--rebuild").add(sourcepackage);
+
+        int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 

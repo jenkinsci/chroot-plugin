@@ -37,6 +37,7 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.QuotedStringTokenizer;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -187,6 +188,24 @@ public final class PBuilderWorker extends ChrootWorker {
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
         setup_script.delete();
+        return exitCode == 0;
+    }
+    
+    @Override
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String sourcePackage) throws IOException, InterruptedException {
+        File buildplace = java.nio.file.Paths.get(build.getWorkspace().getRemote(),"buildroot").toFile();
+        File results = java.nio.file.Paths.get(build.getWorkspace().getRemote(),"results").toFile();
+        if(!buildplace.isDirectory() && !results.isDirectory() && !(buildplace.mkdir() && results.mkdir()))
+            return false;
+        
+        EnvVars environment = build.getEnvironment(listener);
+        sourcePackage = environment.expand(sourcePackage);
+        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
+                .add("--buildplace").add(buildplace.toString())
+                .add("--buildresult").add(results.toString())
+                .add("--basetgz").add(tarBall.getRemote())
+                .add("--").add(sourcePackage);
+        int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
