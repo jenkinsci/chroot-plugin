@@ -29,6 +29,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Node;
@@ -199,12 +200,16 @@ public final class PBuilderWorker extends ChrootWorker {
             return false;
         
         EnvVars environment = build.getEnvironment(listener);
-        sourcePackage = environment.expand(sourcePackage);
+        FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcePackage, environment));
+        if (sourcePackageFiles.length != 1) {
+            //log.fatalError("Invalid number of source packages specified (must be 1)");
+            return false;
+        }
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
                 .add("--buildplace").add(buildplace.toString())
                 .add("--buildresult").add(results.toString())
                 .add("--basetgz").add(tarBall.getRemote())
-                .add("--").add(sourcePackage);
+                .add("--").add(sourcePackageFiles[0]);
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
