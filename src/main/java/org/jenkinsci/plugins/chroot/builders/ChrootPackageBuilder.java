@@ -172,7 +172,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
 
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
-            return FreeStyleProject.class.isAssignableFrom(jobType);
+            return true;
         }
 
         @Override
