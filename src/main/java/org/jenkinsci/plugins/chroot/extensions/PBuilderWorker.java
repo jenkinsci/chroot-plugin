@@ -194,10 +194,22 @@ public final class PBuilderWorker extends ChrootWorker {
     
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String sourcePackage) throws IOException, InterruptedException {
-        File buildplace = java.nio.file.Paths.get(build.getWorkspace().getRemote(),"buildroot").toFile();
-        File results = java.nio.file.Paths.get(build.getWorkspace().getRemote(),"results").toFile();
-        if(!buildplace.isDirectory() && !results.isDirectory() && !(buildplace.mkdir() && results.mkdir()))
-            return false;
+        FilePath buildplace = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "buildroot").toString());
+        FilePath results = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "results").toString());
+        if (!buildplace.exists()) {
+            buildplace.mkdirs();
+            if (!buildplace.exists()) {
+                listener.fatalError("failed to create buildplace dir " + buildplace.getName());
+                return false;
+            }
+        }
+        if (!results.exists()) {
+            results.mkdirs();
+            if (!results.exists()) {
+                listener.fatalError("failed to create results dir " + results.getName());
+                return false;
+            }
+        }
         
         EnvVars environment = build.getEnvironment(listener);
         FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcePackage, environment));
