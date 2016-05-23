@@ -128,7 +128,7 @@ public final class MockWorker extends ChrootWorker {
     }
     
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String sourcepackage) throws IOException, InterruptedException {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcepackage) throws IOException, InterruptedException {
 
         EnvVars environment = build.getEnvironment(listener);
         FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcepackage, environment));

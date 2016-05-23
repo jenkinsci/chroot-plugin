@@ -61,7 +61,7 @@ public abstract class ChrootWorker implements ExtensionPoint {
 
     public abstract boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException;
     
-    public abstract boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String sourcePackage) throws IOException, InterruptedException;
+    public abstract boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException;
 
     public abstract boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException;
 

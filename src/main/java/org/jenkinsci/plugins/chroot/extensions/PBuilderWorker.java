@@ -193,7 +193,7 @@ public final class PBuilderWorker extends ChrootWorker {
     }
     
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String sourcePackage) throws IOException, InterruptedException {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException {
         FilePath buildplace = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "buildroot").toString());
         FilePath results = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "results").toString());
         if (!buildplace.exists()) {

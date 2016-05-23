@@ -30,6 +30,11 @@
 </f:entry>
 
 <f:advanced>
+    <j:if test="${it.getClass().canonicalName == 'hudson.matrix.MatrixProject'}">
+        <f:entry field="archAllLabel" title="Primary matrix configuration">
+            <f:textbox/>
+        </f:entry>
+    </j:if>
 <f:entry field="ignoreExit" title="Ignore exit code">
 <f:checkbox />
 </f:entry>

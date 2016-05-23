@@ -29,6 +29,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
+import hudson.matrix.MatrixProject;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.AutoCompletionCandidates;
@@ -58,6 +59,7 @@ import org.kohsuke.stapler.QueryParameter;
 public class ChrootPackageBuilder extends Builder implements Serializable {
 
     private String chrootName;
+    private String archAllLabel;
     private boolean ignoreExit;
     private List<String> packagesFromFile;
     private boolean clear;
@@ -74,9 +76,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
     }
 
     @DataBoundConstructor
-    public ChrootPackageBuilder(String chrootName, boolean ignoreExit, boolean clear,
+    public ChrootPackageBuilder(String chrootName, String archAllLabel, boolean ignoreExit, boolean clear,
             String sourcePackage, boolean noUpdate, boolean forceInstall) throws IOException {
         this.chrootName = chrootName;
+        this.archAllLabel = archAllLabel;
         this.ignoreExit = ignoreExit;
         this.clear = clear;
         this.sourcePackage = sourcePackage;
@@ -86,6 +89,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
 
     public String getChrootName() {
         return chrootName;
+    }
+    
+    public String getArchAllLabel() {
+        return archAllLabel;
     }
 
     public String getSourcePackage() {
@@ -155,7 +162,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.sourcePackage);
+        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage);
     }
 
     @Extension
