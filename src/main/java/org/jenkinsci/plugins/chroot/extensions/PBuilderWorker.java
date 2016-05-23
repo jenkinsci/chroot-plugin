@@ -202,7 +202,7 @@ public final class PBuilderWorker extends ChrootWorker {
         EnvVars environment = build.getEnvironment(listener);
         FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcePackage, environment));
         if (sourcePackageFiles.length != 1) {
-            //log.fatalError("Invalid number of source packages specified (must be 1)");
+            listener.fatalError("Invalid number of source packages specified (must be 1)");
             return false;
         }
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
