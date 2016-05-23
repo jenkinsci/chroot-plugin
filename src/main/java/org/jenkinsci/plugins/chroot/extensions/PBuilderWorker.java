@@ -196,6 +196,7 @@ public final class PBuilderWorker extends ChrootWorker {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException {
         FilePath buildplace = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "buildroot").toString());
         FilePath results = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "results").toString());
+        String archFlag = "-b";
         if (!buildplace.exists()) {
             buildplace.mkdirs();
             if (!buildplace.exists()) {
@@ -217,10 +218,16 @@ public final class PBuilderWorker extends ChrootWorker {
             listener.fatalError("Invalid number of source packages specified (must be 1)");
             return false;
         }
+        if(archAllLabel != null)
+            if(build.getBuildVariables().containsValue(archAllLabel))
+                archFlag = "-b";
+            else
+                archFlag = "-B";
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
                 .add("--buildplace").add(buildplace.toString())
                 .add("--buildresult").add(results.toString())
                 .add("--basetgz").add(tarBall.getRemote())
+                .add("--debbuildopts").add("\"" + archFlag + "\"")
                 .add("--").add(sourcePackageFiles[0]);
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
