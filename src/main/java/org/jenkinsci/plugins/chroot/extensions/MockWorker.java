@@ -63,7 +63,7 @@ public final class MockWorker extends ChrootWorker {
 
         if (!tarBall.exists()) {
             // copy /etc/mock/default.cfg to this location
-            FilePath system_default_cfg = node.createPath("/etc/mock/default.cfg");
+            FilePath system_default_cfg = node.createPath("/etc/mock/" + tool.getName() + ".cfg");
             FilePath system_logging_cfg = node.createPath("/etc/mock/logging.ini");
             FilePath default_cfg = new FilePath(chrootDir, tool.getName() + ".cfg");
             FilePath logging_cfg = new FilePath(chrootDir, "logging.ini");
