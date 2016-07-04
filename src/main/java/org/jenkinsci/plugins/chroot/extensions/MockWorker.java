@@ -35,8 +35,11 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
 import org.jenkinsci.plugins.chroot.tools.Repository;
 
@@ -47,6 +50,8 @@ import org.jenkinsci.plugins.chroot.tools.Repository;
 @Extension
 public final class MockWorker extends ChrootWorker {
 
+    private static final Logger logger = Logger.getLogger("jenkins.plugins.chroot.extensions.MockWorker");
+    
     @Override
     public FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
         FilePath rootDir = node.getRootPath();
@@ -170,8 +175,22 @@ public final class MockWorker extends ChrootWorker {
 
     @Override
     public boolean healthCheck(Launcher launcher) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
+                .add("--help");
+        try {
+            launcher.launch().cmds(b).stderr(stderr).stdout(stdout).join();
+            if (stdout.toString().contains("--scm-enable")) {
+                return true;
+            }
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
+        logger.log(Level.SEVERE, stderr.toString());
+        return false;    }
 
     @Override
     public List<String> getFallbackPackages() {
