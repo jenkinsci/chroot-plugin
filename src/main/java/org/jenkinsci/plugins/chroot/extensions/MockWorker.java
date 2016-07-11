@@ -114,27 +114,45 @@ public final class MockWorker extends ChrootWorker {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
+        String toolName = getToolInstanceName(launcher, listener, tarBall);
         String userName = super.getUserName(launcher);
         int id = super.getUID(launcher, userName);
         commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands;
         FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
 
-//            String cfg_content = String.format(
-//                    "config_opts['basedir'] = '%s'\n"
-//                    + "config_opts['cache_topdir'] = '%s'\n"
-//                    + "config_opts['plugin_conf']['bind_mount_enable'] = True\n"
-//                    + "config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('%s', '%s' ))\n"
-//                    + "%s", rootDir.getRemote(),
-//                    rootDir.getRemote(),
-//                    node.getRootPath().absolutize().getRemote(),
-//                    node.getRootPath().absolutize().getRemote(),
-//                    default_cfg.readToString());
+        FilePath rootDir = build.getWorkspace();
+        Node node = build.getBuiltOn();
+        FilePath chrootDir = rootDir.createTempDir("chroot", "");
+        FilePath resultDir = chrootDir.child("result");
+        FilePath buildDir = chrootDir.child("root");
+        FilePath cacheDir = chrootDir.child("cache");
+        FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
 
+        unpackChroot(build.getBuiltOn(), listener, tarBall, chrootDir);
 
-        ArgumentListBuilder b = new ArgumentListBuilder().add(getTool()).add(script);
+        String cfg_content = String.format(
+                "config_opts['basedir'] = '%s'\n"
+                + "config_opts['cache_topdir'] = '%s'\n"
+                + "config_opts['plugin_conf']['bind_mount_enable'] = True\n"
+                + "config_opts['plugin_conf']['bind_mount_opts']['dirs'].append(('%s', '%s' ))\n"
+                + "%s", buildDir.getRemote(),
+                cacheDir.getRemote(),
+                node.getRootPath().absolutize().getRemote(),
+                node.getRootPath().absolutize().getRemote(),
+                default_cfg.readToString());
+
+        default_cfg.write(cfg_content, "UTF-8");
+
+        ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
+                .add("-r").add(default_cfg.getBaseName())
+                .add("--configdir").add(chrootDir.getRemote())
+                .add("--resultdir").add(resultDir.getRemote()).add("--chroot").add("/bin/sh").add(script);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
+        ArgumentListBuilder cmd = new ArgumentListBuilder();
+        cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
+        int ret = launcher.launch().cmds(cmd).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
     
