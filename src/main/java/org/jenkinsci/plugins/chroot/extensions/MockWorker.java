@@ -65,7 +65,7 @@ public final class MockWorker extends ChrootWorker {
         tarBall = rootDir.child(tool.getName() + ".tgz");
         FilePath chrootDir = node.getRootPath().createTempDir(tool.getName(), "");
         FilePath cacheDir = chrootDir.child("cache");
-        FilePath buildDir = chrootDir.child("build");
+        FilePath buildDir = chrootDir.child("root");
         FilePath resultDir = chrootDir.child("result");
 
         if (!tarBall.exists()) {
@@ -94,6 +94,10 @@ public final class MockWorker extends ChrootWorker {
                     .add("--init");
             Launcher launcher = node.createLauncher(log);
             int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            packChroot(node, log, tarBall, chrootDir);
+            cmd = new ArgumentListBuilder();
+            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
+            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
         }
         return tarBall;
     }
