@@ -36,12 +36,14 @@ import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolsetProperty;
 import org.jenkinsci.plugins.chroot.tools.Repository;
+import org.jenkinsci.plugins.chroot.util.ChrootUtil;
 
 /**
  *
