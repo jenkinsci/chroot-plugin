@@ -17,7 +17,7 @@
  *  along with Chroot-plugin.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
+ /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
@@ -53,7 +53,7 @@ import org.jenkinsci.plugins.chroot.util.ChrootUtil;
 public final class MockWorker extends ChrootWorker {
 
     private static final Logger logger = Logger.getLogger("jenkins.plugins.chroot.extensions.MockWorker");
-    
+
     @Override
     public FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException {
         FilePath rootDir = node.getRootPath();
@@ -155,7 +155,7 @@ public final class MockWorker extends ChrootWorker {
         int ret = launcher.launch().cmds(cmd).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
-    
+
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcepackage) throws IOException, InterruptedException {
 
@@ -165,7 +165,7 @@ public final class MockWorker extends ChrootWorker {
             //log.fatalError("Invalid number of source packages specified (must be 1)");
             return false;
         }
-        
+
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
                 .add("--rebuild").add(sourcePackageFiles[0]);
 
@@ -233,7 +233,8 @@ public final class MockWorker extends ChrootWorker {
             logger.log(Level.SEVERE, null, ex);
         }
         logger.log(Level.SEVERE, stderr.toString());
-        return false;    }
+        return false;
+    }
 
     @Override
     public List<String> getFallbackPackages() {
