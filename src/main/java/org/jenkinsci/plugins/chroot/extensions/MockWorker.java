@@ -198,4 +198,56 @@ public final class MockWorker extends ChrootWorker {
     public List<String> getFallbackPackages() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
+    private static Boolean packChroot(Node node, TaskListener log, FilePath tarBall, FilePath chrootDir) {
+        try {
+            Launcher launcher = node.createLauncher(log);
+            ArgumentListBuilder cmd = new ArgumentListBuilder();
+            cmd.add("sudo").add("tar").add("-c").add("-z").add("-f")
+                    .add(tarBall).add("-C").add(chrootDir).add(".");
+            int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            cmd = new ArgumentListBuilder();
+            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
+            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            ChrootUtil.saveDigest(tarBall);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static Boolean unpackChroot(Node node, TaskListener log, FilePath tarBall, FilePath chrootDir) {
+        try {
+            Launcher launcher = node.createLauncher(log);
+            FilePath unzippedTarBall = new FilePath(new File(tarBall.getRemote().replace(".tgz", ".tar")));
+            ArgumentListBuilder cmd = new ArgumentListBuilder();
+            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
+            int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            chrootDir.mkdirs();
+            cmd = new ArgumentListBuilder();
+            cmd.add("gunzip").add("-k").add(tarBall);
+            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            cmd = new ArgumentListBuilder();
+            cmd.add("sudo").add("tar").add("-x").add("-f")
+                    .add(unzippedTarBall).add("-C").add(chrootDir);
+            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            unzippedTarBall.delete();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String getToolInstanceName(Launcher launcher, TaskListener log, FilePath tarBall) {
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        try {
+            ArgumentListBuilder cmd = new ArgumentListBuilder();
+
+            cmd.add("/usr/bin/basename").add(tarBall.toString()).add(".tgz");
+            int ret = launcher.launch().cmds(cmd).stdout(stdout).stderr(log.getLogger()).join();
+        } catch (Exception e) {
+            return null;
+        }
+        return stdout.toString().trim();
+    }
 }
