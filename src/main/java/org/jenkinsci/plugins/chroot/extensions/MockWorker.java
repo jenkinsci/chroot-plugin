@@ -175,8 +175,27 @@ public final class MockWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener log, FilePath tarBall) throws IOException, InterruptedException {
+        try {
+            String toolName = getToolInstanceName(launcher, log, tarBall);
+            FilePath chrootDir = build.getBuiltOn().getRootPath().createTempDir(toolName, "");
+            FilePath cacheDir = chrootDir.child("cache");
+            FilePath buildDir = chrootDir.child("build");
+            FilePath resultDir = chrootDir.child("result");
+            unpackChroot(build.getBuiltOn(), log, tarBall, chrootDir);
+            ArgumentListBuilder cmd = new ArgumentListBuilder();
+            FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
+            cmd.add(getTool())
+                    .add("-r").add(default_cfg.getBaseName())
+                    .add("--configdir").add(chrootDir.getRemote())
+                    .add("--resultdir").add(resultDir.getRemote())
+                    .add("--update");
+            int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
+            packChroot(build.getBuiltOn(), log, tarBall, chrootDir);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
