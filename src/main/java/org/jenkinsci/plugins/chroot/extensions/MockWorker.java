@@ -166,10 +166,38 @@ public final class MockWorker extends ChrootWorker {
             return false;
         }
 
+        String toolName = getToolInstanceName(launcher, listener, tarBall);
+        String userName = super.getUserName(launcher);
+        int id = super.getUID(launcher, userName);
+
+        FilePath rootDir = build.getWorkspace();
+        Node node = build.getBuiltOn();
+        FilePath chrootDir = rootDir.createTempDir("chroot", "");
+        FilePath resultDir = rootDir.child("result");
+        FilePath buildDir = chrootDir.child("root");
+        FilePath cacheDir = chrootDir.child("cache");
+        FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
+
+        unpackChroot(build.getBuiltOn(), listener, tarBall, chrootDir);
+
+        String cfg_content = String.format(
+                "config_opts['basedir'] = '%s'\n"
+                + "config_opts['cache_topdir'] = '%s'\n"
+                + "%s", buildDir.getRemote(),
+                cacheDir.getRemote(),
+                default_cfg.readToString());
+
+        default_cfg.write(cfg_content, "UTF-8");
+
         ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
-                .add("--rebuild").add(sourcePackageFiles[0]);
+                .add("-v").add("-r").add(default_cfg.getBaseName())
+                .add("--configdir").add(chrootDir.getRemote())
+                .add("--resultdir").add(resultDir.getRemote()).add("--rebuild").add(sourcePackageFiles[0]);
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
+        ArgumentListBuilder cmd = new ArgumentListBuilder();
+        cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
+        int ret = launcher.launch().cmds(cmd).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
