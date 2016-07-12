@@ -66,7 +66,7 @@ public final class MockWorker extends ChrootWorker {
         FilePath chrootDir = node.getRootPath().createTempDir(tool.getName(), "");
         FilePath cacheDir = chrootDir.child("cache");
         FilePath buildDir = chrootDir.child("root");
-        FilePath resultDir = chrootDir.child("result");
+        FilePath resultDir = rootDir.child("result");
 
         if (!tarBall.exists()) {
             // copy /etc/mock/default.cfg to this location
@@ -123,7 +123,7 @@ public final class MockWorker extends ChrootWorker {
         FilePath rootDir = build.getWorkspace();
         Node node = build.getBuiltOn();
         FilePath chrootDir = rootDir.createTempDir("chroot", "");
-        FilePath resultDir = chrootDir.child("result");
+        FilePath resultDir = rootDir.child("result");
         FilePath buildDir = chrootDir.child("root");
         FilePath cacheDir = chrootDir.child("cache");
         FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
@@ -196,7 +196,8 @@ public final class MockWorker extends ChrootWorker {
     public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener log, FilePath tarBall) throws IOException, InterruptedException {
         try {
             String toolName = getToolInstanceName(launcher, log, tarBall);
-            FilePath chrootDir = build.getBuiltOn().getRootPath().createTempDir(toolName, "");
+            FilePath rootDir = build.getBuiltOn().getRootPath();
+            FilePath chrootDir = rootDir.createTempDir(toolName, "");
             FilePath cacheDir = chrootDir.child("cache");
             FilePath buildDir = chrootDir.child("build");
             FilePath resultDir = chrootDir.child("result");
