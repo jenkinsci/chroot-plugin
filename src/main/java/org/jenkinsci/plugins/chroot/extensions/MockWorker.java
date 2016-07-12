@@ -211,6 +211,9 @@ public final class MockWorker extends ChrootWorker {
                     .add("--update");
             int ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
             packChroot(build.getBuiltOn(), log, tarBall, chrootDir);
+            cmd = new ArgumentListBuilder();
+            cmd.add("sudo").add("rm").add("-fr").add(chrootDir);
+            ret = launcher.launch().cmds(cmd).stdout(log).stderr(log.getLogger()).join();
             return true;
         } catch (Exception e) {
             return false;
