@@ -229,6 +229,7 @@ public final class MockWorker extends ChrootWorker {
             FilePath cacheDir = chrootDir.child("cache");
             FilePath buildDir = chrootDir.child("build");
             FilePath resultDir = chrootDir.child("result");
+            resultDir.mkdirs();
             unpackChroot(build.getBuiltOn(), log, tarBall, chrootDir);
             ArgumentListBuilder cmd = new ArgumentListBuilder();
             FilePath default_cfg = new FilePath(chrootDir, toolName + ".cfg");
