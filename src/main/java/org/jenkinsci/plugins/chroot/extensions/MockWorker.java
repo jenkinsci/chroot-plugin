@@ -24,9 +24,11 @@
 package org.jenkinsci.plugins.chroot.extensions;
 
 import com.google.common.collect.ImmutableList;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Node;
@@ -122,6 +124,23 @@ public final class MockWorker extends ChrootWorker {
 
         int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
+        return exitCode == 0;
+    }
+    
+    @Override
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcepackage) throws IOException, InterruptedException {
+
+        EnvVars environment = build.getEnvironment(listener);
+        FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcepackage, environment));
+        if (sourcePackageFiles.length != 1) {
+            //log.fatalError("Invalid number of source packages specified (must be 1)");
+            return false;
+        }
+        
+        ArgumentListBuilder b = new ArgumentListBuilder().add(getTool())
+                .add("--rebuild").add(sourcePackageFiles[0]);
+
+        int exitCode = launcher.launch().cmds(b).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 

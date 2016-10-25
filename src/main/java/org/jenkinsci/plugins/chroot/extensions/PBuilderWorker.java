@@ -29,6 +29,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Node;
@@ -37,6 +38,7 @@ import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.QuotedStringTokenizer;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -187,6 +189,47 @@ public final class PBuilderWorker extends ChrootWorker {
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
         setup_script.delete();
+        return exitCode == 0;
+    }
+    
+    @Override
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException {
+        FilePath buildplace = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "buildroot").toString());
+        FilePath results = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "results").toString());
+        String archFlag = "-b";
+        if (!buildplace.exists()) {
+            buildplace.mkdirs();
+            if (!buildplace.exists()) {
+                listener.fatalError("failed to create buildplace dir " + buildplace.getName());
+                return false;
+            }
+        }
+        if (!results.exists()) {
+            results.mkdirs();
+            if (!results.exists()) {
+                listener.fatalError("failed to create results dir " + results.getName());
+                return false;
+            }
+        }
+        
+        EnvVars environment = build.getEnvironment(listener);
+        FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcePackage, environment));
+        if (sourcePackageFiles.length != 1) {
+            listener.fatalError("Invalid number of source packages specified (must be 1)");
+            return false;
+        }
+        if(archAllLabel != null)
+            if(build.getBuildVariables().containsValue(archAllLabel))
+                archFlag = "-b";
+            else
+                archFlag = "-B";
+        ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
+                .add("--buildplace").add(buildplace.toString())
+                .add("--buildresult").add(results.toString())
+                .add("--basetgz").add(tarBall.getRemote())
+                .add("--debbuildopts").add("\"" + archFlag + "\"")
+                .add("--").add(sourcePackageFiles[0]);
+        int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         return exitCode == 0;
     }
 
