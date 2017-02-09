@@ -61,6 +61,7 @@ public class ChrootBuilder extends Builder implements Serializable {
     private boolean ignoreExit;
     private List<String> additionalPackages;
     private String packagesFile;
+    private String bindMounts;
     private boolean clear;
     private String command;
     private boolean loginAsRoot;
@@ -77,12 +78,13 @@ public class ChrootBuilder extends Builder implements Serializable {
 
     @DataBoundConstructor
     public ChrootBuilder(String chrootName, boolean ignoreExit,
-            String additionalPackages, String packagesFile, boolean clear,
+            String additionalPackages, String packagesFile, String bindMounts, boolean clear,
             String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) throws IOException {
         this.loginAsRoot = loginAsRoot;
         this.chrootName = chrootName;
         this.ignoreExit = ignoreExit;
         this.additionalPackages = ChrootUtil.splitPackages(additionalPackages);
+        this.bindMounts = bindMounts;
         this.packagesFile = packagesFile;
         this.clear = clear;
         this.command = command;
@@ -112,6 +114,10 @@ public class ChrootBuilder extends Builder implements Serializable {
 
     public String getPackagesFile() {
         return packagesFile;
+    }
+    
+    public String getBindMounts() {
+        return bindMounts;
     }
 
     public boolean isClear() {
@@ -192,7 +198,7 @@ public class ChrootBuilder extends Builder implements Serializable {
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
+        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, this.bindMounts, isLoginAsRoot());
     }
 
     @Extension
