@@ -32,7 +32,10 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.AutoCompletionCandidates;
 import hudson.model.BuildListener;
+import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -43,10 +46,12 @@ import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 import javax.servlet.ServletException;
+import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.AncestorInPath;
@@ -55,7 +60,7 @@ import org.kohsuke.stapler.AncestorInPath;
  *
  * @author roman
  */
-public class ChrootBuilder extends Builder implements Serializable {
+public class ChrootBuilder extends Builder implements Serializable, SimpleBuildStep {
 
     private String chrootName;
     private boolean ignoreExit;
@@ -132,23 +137,28 @@ public class ChrootBuilder extends Builder implements Serializable {
             _source.copyTo(_target);
             return null;
         }
+
+        public void checkRoles(RoleChecker rc) throws SecurityException {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+    public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(env.expand(this.chrootName));
-        installation = installation.forNode(build.getBuiltOn(), listener);
+        installation = installation.forNode(Computer.currentComputer().getNode(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
             listener.fatalError("Please check if pbuilder is installed on the selected node, and that"
                     + " the user Jenkins uses can run pbuilder with sudo.");
-            return false;
+            // return false;
+            throw new IOException("Failure");
         }
-        FilePath tarBall = new FilePath(build.getBuiltOn().getChannel(), installation.getHome());
+        FilePath tarBall = new FilePath(launcher.getChannel(), installation.getHome());
 
-        FilePath workerTarBall = build.getWorkspace().child(env.expand(this.chrootName)).child(tarBall.getName());
+        FilePath workerTarBall = workspace.child(env.expand(this.chrootName)).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
 
         // force environment recreation when clear is selected
@@ -156,7 +166,8 @@ public class ChrootBuilder extends Builder implements Serializable {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
-                return ret || ignoreExit;
+                // return ret || ignoreExit;
+                throw new IOException("Failure");
             }
         }
 
@@ -168,13 +179,14 @@ public class ChrootBuilder extends Builder implements Serializable {
         //install extra packages
         List<String> packages = new LinkedList<String>(this.additionalPackages);
         for (String packagesFile : ChrootUtil.splitFiles(getPackagesFile())) {
-            FilePath packageFile = new FilePath(build.getWorkspace(), packagesFile);
+            FilePath packageFile = new FilePath(workspace, packagesFile);
             if (packageFile.exists() && !packageFile.isDirectory()) {
                 String packageFilePackages = packageFile.readToString();
                 packages.addAll(ChrootUtil.splitPackages(packageFilePackages));
             } else {
                 listener.error("Requirements file '" + packagesFile + "' is not an existing file.");
-                return false || ignoreExit;
+                // return false || ignoreExit;
+                throw new IOException("Failure");
             }
         }
 
@@ -182,17 +194,19 @@ public class ChrootBuilder extends Builder implements Serializable {
             boolean ret = installation.getChrootWorker().installPackages(build, launcher, listener, workerTarBall, packages, isForceInstall());
             if (ret == false) {
                 listener.fatalError("Installing additional packages in chroot environment failed.");
-                return ret || ignoreExit;
+                // return ret || ignoreExit;
+                throw new IOException("Failure");
             }
         } else if (!this.isNoUpdate()) {
             boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
-                return ret || ignoreExit;
+                // return ret || ignoreExit;
+                throw new IOException("Failure");
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
+        // return ignoreExit || installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
     }
 
     @Extension

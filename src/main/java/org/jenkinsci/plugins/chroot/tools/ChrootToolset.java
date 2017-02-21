@@ -195,8 +195,8 @@ public final class ChrootToolset extends ToolInstallation implements Environment
             return Collections.singletonList(new ChrootCreator(null));
         }
 
-        public FormValidation doCheckName(@QueryParameter String value)
-                throws IOException, ServletException {
+        @Override
+        public FormValidation doCheckName(@QueryParameter String value) {
             if (value.length() == 0) {
                 return FormValidation.error("Please enter a unique descriptive name.");
             }
