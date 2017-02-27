@@ -171,7 +171,8 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        // return ignoreExit || installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage);
+        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage) && !ignoreExit)
+            throw new IOException();
     }
 
     @Extension
