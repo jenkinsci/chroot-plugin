@@ -136,7 +136,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(env.expand(this.chrootName));
-        installation = installation.forNode(Computer.currentComputer().getNode(), listener);
+        installation = installation.forNode(workspace.toComputer().getNode(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
@@ -144,7 +144,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
                     + " the user, Jenkins uses, cann run pbuilder with sudo.");
             // return false;
         }
-        FilePath tarBall = new FilePath(Computer.currentComputer().getNode().getChannel(), installation.getHome());
+        FilePath tarBall = new FilePath(workspace.toComputer().getNode().getChannel(), installation.getHome());
 
         FilePath workerTarBall = workspace.child(env.expand(this.chrootName)).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
@@ -171,7 +171,8 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        // return ignoreExit || installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage);
+        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage) && !ignoreExit)
+            throw new IOException();
     }
 
     @Extension

@@ -147,7 +147,7 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(env.expand(this.chrootName));
-        installation = installation.forNode(Computer.currentComputer().getNode(), listener);
+        installation = installation.forNode(workspace.toComputer().getNode(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
@@ -206,7 +206,8 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        // return ignoreExit || installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.command, isLoginAsRoot());
+        if(!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.command, isLoginAsRoot()) && !ignoreExit)
+            throw new IOException();
     }
 
     @Extension
