@@ -135,6 +135,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             this.target = target;
         }
 
+        @Override
         public Void invoke(File source, VirtualChannel channel) throws IOException, InterruptedException {
             FilePath _source = new FilePath(source);
             FilePath _target = new FilePath(new File(target));
@@ -142,12 +143,13 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             return null;
         }
 
+        @Override
         public void checkRoles(RoleChecker rc) throws SecurityException {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
     }
 
-    // @Override
+    @Override
     public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(env.expand(this.chrootName));
