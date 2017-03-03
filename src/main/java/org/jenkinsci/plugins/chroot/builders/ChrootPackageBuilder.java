@@ -29,13 +29,9 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
-import hudson.matrix.MatrixProject;
-import hudson.model.AbstractBuild;
+import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.AutoCompletionCandidates;
-import hudson.model.BuildListener;
-import hudson.model.Computer;
-import hudson.model.FreeStyleProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
@@ -47,14 +43,15 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+import javax.annotation.CheckForNull;
 import javax.servlet.ServletException;
 import jenkins.tasks.SimpleBuildStep;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
 import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 /**
@@ -63,37 +60,45 @@ import org.kohsuke.stapler.QueryParameter;
  */
 public class ChrootPackageBuilder extends Builder implements Serializable, SimpleBuildStep {
 
-    private String chrootName;
+    private final String chrootName;
     private String archAllLabel;
     private boolean ignoreExit;
-    private List<String> packagesFromFile;
     private boolean clear;
-    private String sourcePackage;
+    private final String sourcePackage;
     private boolean noUpdate;
     private boolean forceInstall;
 
+    @DataBoundSetter
+    public void setForceInstall(boolean forceInstall) {
+        this.forceInstall = forceInstall;
+    }
+    
     public boolean isForceInstall() {
         return forceInstall;
     }
 
+    @DataBoundSetter
+    public void setNoUpdate(boolean noUpdate) {
+        this.noUpdate = noUpdate;
+    }
+    
     public boolean isNoUpdate() {
         return noUpdate;
     }
-
+    
     @DataBoundConstructor
-    public ChrootPackageBuilder(String chrootName, String archAllLabel, boolean ignoreExit, boolean clear,
-            String sourcePackage, boolean noUpdate, boolean forceInstall) throws IOException {
-        this.chrootName = chrootName;
-        this.archAllLabel = archAllLabel;
-        this.ignoreExit = ignoreExit;
-        this.clear = clear;
-        this.sourcePackage = sourcePackage;
-        this.noUpdate = noUpdate;
-        this.forceInstall = forceInstall;
+    public ChrootPackageBuilder(@CheckForNull String chrootName, @CheckForNull String sourcePackage) throws IOException {
+        this.chrootName = Util.fixNull(chrootName);
+        this.sourcePackage = Util.fixNull(sourcePackage);
     }
 
     public String getChrootName() {
         return chrootName;
+    }
+    
+    @DataBoundSetter
+    public void setArchAllLabel(@CheckForNull String archAllLabel) {
+        this.archAllLabel = Util.fixNull(archAllLabel);
     }
     
     public String getArchAllLabel() {
@@ -104,10 +109,20 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
         return sourcePackage;
     }
 
+    @DataBoundSetter
+    public void setIgnoreExit(boolean ignoreExit) {
+        this.ignoreExit = ignoreExit;
+    }
+    
     public boolean isIgnoreExit() {
         return ignoreExit;
     }
 
+    @DataBoundSetter
+    public void setClear(boolean clear) {
+        this.clear = clear;
+    }
+    
     public boolean isClear() {
         return clear;
     }
