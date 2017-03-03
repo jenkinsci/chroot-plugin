@@ -159,7 +159,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             listener.fatalError("Installation of chroot environment failed");
             listener.fatalError("Please check if pbuilder is installed on the selected node and that"
                     + " the user, Jenkins uses, cann run pbuilder with sudo.");
-            // return false;
+            throw new IOException("Installation of chroot environment failed");
         }
         FilePath tarBall = new FilePath(workspace.toComputer().getNode().getChannel(), installation.getHome());
 
@@ -171,7 +171,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
-                // return ret || ignoreExit;
+                if(ignoreExit)
+                    return;
+                else
+                    throw new IOException("Chroot environment cleanup failed");
             }
         }
 
@@ -184,12 +187,15 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
-                // return ret || ignoreExit;
+                if(ignoreExit)
+                    return;
+                else
+                    throw new IOException("Updating repository indices in chroot environment failed.");
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
         if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage) && !ignoreExit)
-            throw new IOException();
+            throw new IOException("Package build failed");
     }
 
     @Extension
