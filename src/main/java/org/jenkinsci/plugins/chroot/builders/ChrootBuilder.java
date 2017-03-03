@@ -28,12 +28,9 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
+import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.AutoCompletionCandidates;
-import hudson.model.BuildListener;
-import hudson.model.Computer;
-import hudson.model.FreeStyleProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
@@ -43,11 +40,12 @@ import hudson.util.FormValidation;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import javax.annotation.CheckForNull;
 import javax.servlet.ServletException;
 import jenkins.tasks.SimpleBuildStep;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
@@ -55,6 +53,7 @@ import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  *
@@ -62,39 +61,45 @@ import org.kohsuke.stapler.AncestorInPath;
  */
 public class ChrootBuilder extends Builder implements Serializable, SimpleBuildStep {
 
-    private String chrootName;
+    private final String chrootName;
     private boolean ignoreExit;
-    private List<String> additionalPackages;
+    private List<String> additionalPackages = new ArrayList<>();
     private String packagesFile;
     private boolean clear;
-    private String command;
+    private final String command;
     private boolean loginAsRoot;
     private boolean noUpdate;
     private boolean forceInstall;
 
+    @DataBoundSetter
+    public void setForceInstall(boolean forceInstall) {
+        this.forceInstall = forceInstall;
+    }
+    
     public boolean isForceInstall() {
         return forceInstall;
     }
 
+    @DataBoundSetter
+    public void setNoUpdate(boolean noUpdate) {
+        this.noUpdate = noUpdate;
+    }
+    
     public boolean isNoUpdate() {
         return noUpdate;
     }
 
     @DataBoundConstructor
-    public ChrootBuilder(String chrootName, boolean ignoreExit,
-            String additionalPackages, String packagesFile, boolean clear,
-            String command, boolean loginAsRoot, boolean noUpdate, boolean forceInstall) throws IOException {
-        this.loginAsRoot = loginAsRoot;
-        this.chrootName = chrootName;
-        this.ignoreExit = ignoreExit;
-        this.additionalPackages = ChrootUtil.splitPackages(additionalPackages);
-        this.packagesFile = packagesFile;
-        this.clear = clear;
-        this.command = command;
-        this.noUpdate = noUpdate;
-        this.forceInstall = forceInstall;
+    public ChrootBuilder(String chrootName, String command) throws IOException {
+        this.chrootName = Util.fixNull(chrootName);
+        this.command = Util.fixNull(command);
     }
 
+    @DataBoundSetter
+    public void setLoginAsRoot(boolean loginAsRoot) {
+        this.loginAsRoot = loginAsRoot;
+    }
+    
     public boolean isLoginAsRoot() {
         return loginAsRoot;
     }
@@ -107,18 +112,38 @@ public class ChrootBuilder extends Builder implements Serializable, SimpleBuildS
         return command;
     }
 
+    @DataBoundSetter
+    public void setIgnoreExit(boolean ignoreExit) {
+        this.ignoreExit = ignoreExit;
+    }
+    
     public boolean isIgnoreExit() {
         return ignoreExit;
     }
 
+    @DataBoundSetter
+    public void setAdditionalPackages(@CheckForNull String additionalPackages) {
+        this.additionalPackages = ChrootUtil.splitPackages(Util.fixNull(additionalPackages));
+    }
+    
     public String getAdditionalPackages() {
-        return StringUtils.join(additionalPackages, " ");
+        return Util.fixEmptyAndTrim(StringUtils.join(additionalPackages, " "));
     }
 
+    @DataBoundSetter
+    public void setPackagesFile(@CheckForNull String packagesFile) {
+        this.packagesFile = Util.fixNull(packagesFile);
+    }
+    
     public String getPackagesFile() {
-        return packagesFile;
+        return Util.fixEmptyAndTrim(packagesFile);
     }
 
+    @DataBoundSetter
+    public void setClear(boolean clear) {
+        this.clear = clear;
+    }
+    
     public boolean isClear() {
         return clear;
     }
