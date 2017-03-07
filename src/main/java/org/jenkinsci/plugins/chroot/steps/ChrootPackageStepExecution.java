@@ -38,7 +38,7 @@ public class ChrootPackageStepExecution extends AbstractSynchronousNonBlockingSt
     @Override
     protected Void run() throws Exception {
         ChrootPackageBuilder builder = new ChrootPackageBuilder(step.getChrootName(), step.getSourcePackage());
-        builder.setArchAllLabel(step.getArchAllLabel());
+        builder.setArchAllBehaviour(step.getArchAllBehaviour());
         builder.setIgnoreExit(step.isIgnoreExit());
         builder.setClear(step.isClear());
         builder.setNoUpdate(step.isNoUpdate());

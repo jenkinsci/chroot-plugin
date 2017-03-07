@@ -221,10 +221,18 @@ public final class PBuilderWorker extends ChrootWorker {
             return false;
         }
         if(archAllLabel != null)
-            if(envVars.containsValue(archAllLabel))
-                archFlag = "-b";
-            else
-                archFlag = "-B";
+            if(archAllLabel.startsWith("__SPECIAL__")) {
+                if(archAllLabel == "__SPECIAL__arch_and_all")
+                    archFlag = "-b";
+                else if(archAllLabel == "_SPECIAL_arch")
+                    archFlag = "-B";
+            }
+            else {
+                if(envVars.containsValue(archAllLabel))
+                    archFlag = "-b";
+                else
+                    archFlag = "-B";
+            }
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
                 .add("--buildplace").add(buildplace.toString())
                 .add("--buildresult").add(results.toString())

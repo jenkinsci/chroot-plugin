@@ -38,6 +38,8 @@ import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.ListBoxModel.Option;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -67,6 +69,7 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
     private final String sourcePackage;
     private boolean noUpdate;
     private boolean forceInstall;
+    private String archAllBehaviour;
 
     @DataBoundSetter
     public void setForceInstall(boolean forceInstall) {
@@ -103,6 +106,15 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
     
     public String getArchAllLabel() {
         return archAllLabel;
+    }
+    
+    @DataBoundSetter
+    public void setArchAllBehaviour(@CheckForNull String archAllBehaviour) {
+        this.archAllBehaviour = Util.fixNull(archAllBehaviour);
+    }
+    
+    public String getArchAllBehaviour() {
+        return Util.fixEmptyAndTrim(archAllBehaviour);
     }
 
     public String getSourcePackage() {
@@ -194,7 +206,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage) && !ignoreExit)
+        String tempArchAllLabel = this.archAllLabel;
+        if(this.archAllBehaviour != null && this.archAllBehaviour != "")
+            tempArchAllLabel = "__SPECIAL__" + this.archAllBehaviour;
+        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, tempArchAllLabel, this.sourcePackage) && !ignoreExit)
             throw new IOException("Package build failed");
     }
 
@@ -241,6 +256,14 @@ public class ChrootPackageBuilder extends Builder implements Serializable, Simpl
                 return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));
             }
             return FormValidation.ok();
+        }
+        
+        public ListBoxModel doFillArchAllBehaviourItems() {
+            return new ListBoxModel(
+                    new Option("Default", null),
+                    new Option("All binaries","all_and_arch"),
+                    new Option("Architecture-specific binaries","arch")
+            );
         }
     }
 }

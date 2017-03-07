@@ -30,9 +30,9 @@
 </f:entry>
 
 <f:advanced>
-    <j:if test="${it.getClass().canonicalName == 'hudson.matrix.MatrixProject'}">
-        <f:entry field="archAllLabel" title="Primary matrix configuration">
-            <f:textbox/>
+    <j:if test="${it.getClass().canonicalName == 'org.jenkinsci.plugins.workflow.cps.Snippetizer'}">
+        <f:entry field="archAllBehaviour" title="Multi-architecture behaviour">
+            <f:select/>
         </f:entry>
     </j:if>
 <f:entry field="ignoreExit" title="Ignore exit code">

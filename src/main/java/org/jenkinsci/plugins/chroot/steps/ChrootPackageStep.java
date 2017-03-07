@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.chroot.steps;
 
 import hudson.Extension;
 import hudson.Util;
+import hudson.util.ListBoxModel;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
@@ -21,6 +22,7 @@ public class ChrootPackageStep extends AbstractStepImpl {
     private final @CheckForNull String sourcePackage;
     private boolean noUpdate;
     private boolean forceInstall;
+    private String archAllBehaviour;
     
     @DataBoundConstructor
     public ChrootPackageStep(@CheckForNull String chrootName, @CheckForNull String sourcePackage) {
@@ -51,13 +53,14 @@ public class ChrootPackageStep extends AbstractStepImpl {
     }
     
     @DataBoundSetter
-    public void setArchAllLabel(@CheckForNull String archAllLabel) {
-        this.archAllLabel = Util.fixNull(archAllLabel);
+    public void setArchAllBehaviour(@CheckForNull String archAllBehaviour) {
+        this.archAllBehaviour = Util.fixNull(archAllBehaviour);
     }
     
-    public @CheckForNull String getArchAllLabel() {
-        return archAllLabel;
+    public String getArchAllBehaviour() {
+        return Util.fixEmptyAndTrim(archAllBehaviour);
     }
+
 
     public @CheckForNull String getSourcePackage() {
         return sourcePackage;
@@ -94,6 +97,15 @@ public class ChrootPackageStep extends AbstractStepImpl {
         @Override
         public String getDisplayName() {
             return "Build Debian/RPM source package in a chroot";
+        }
+        
+        
+        public ListBoxModel doFillArchAllBehaviourItems() {
+            return new ListBoxModel(
+                    new ListBoxModel.Option("Default", null),
+                    new ListBoxModel.Option("All binaries","all_and_arch"),
+                    new ListBoxModel.Option("Architecture-specific binaries","arch")
+            );
         }
     }
 }
