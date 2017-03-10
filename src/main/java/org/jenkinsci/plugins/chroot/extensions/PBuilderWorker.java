@@ -33,6 +33,7 @@ import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Node;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
@@ -156,19 +157,19 @@ public final class PBuilderWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
+    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
         String userName = super.getUserName(launcher);
         String groupName = super.getGroupName(launcher, userName);
-        String userHome = build.getWorkspace().getRemote();
+        String userHome = workspace.getRemote();
         int id = super.getUID(launcher, userName);
         int gid = super.getGID(launcher, userName);
         EnvVars environment = build.getEnvironment(listener);
-        commands = "cd " + build.getWorkspace().getRemote() + "\n" + commands + "\n";
+        commands = "cd " + workspace.getRemote() + "\n" + commands + "\n";
         commands = "set -e\nset -x verbose\n" + commands;
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             commands = String.format("if [ -z ${%s} ]; then export %s=\"%s\"; fi;\n", entry.getKey(), entry.getKey(), entry.getValue()) + commands;
         }
-        FilePath script = build.getWorkspace().createTextTempFile("chroot", ".sh", commands);
+        FilePath script = workspace.createTextTempFile("chroot", ".sh", commands);
         String create_group = String.format("groupadd -g %d %s | :\n", gid, groupName);
         String create_user = String.format("useradd %s -u %d -g %d -m | : \n", userName, id, gid);
         String run_script;
@@ -177,11 +178,11 @@ public final class PBuilderWorker extends ChrootWorker {
             sudoUser = "root";
         }
 
-        run_script = String.format("chmod u+x %s\n ret=1; sudo -i -u %s bash -- %s; if [ $? -eq 0 ]; then ret=0; fi;cd %s; chown %s:%s ./ -R; exit $ret\n", script.getRemote(), sudoUser, script.getRemote(), build.getWorkspace().getRemote(), userName, groupName);
+        run_script = String.format("chmod u+x %s\n ret=1; sudo -i -u %s bash -- %s; if [ $? -eq 0 ]; then ret=0; fi;cd %s; chown %s:%s ./ -R; exit $ret\n", script.getRemote(), sudoUser, script.getRemote(), workspace.getRemote(), userName, groupName);
 
         String shebang = "#!/usr/bin/env bash\n";
         String setup_command = shebang + create_group + create_user + run_script;
-        FilePath setup_script = build.getWorkspace().createTextTempFile("chroot", ".sh", setup_command);
+        FilePath setup_script = workspace.createTextTempFile("chroot", ".sh", setup_command);
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--execute")
                 .add("--bindmounts").add(userHome)
                 .add("--basetgz").add(tarBall.getRemote())
@@ -193,9 +194,10 @@ public final class PBuilderWorker extends ChrootWorker {
     }
     
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException {
-        FilePath buildplace = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "buildroot").toString());
-        FilePath results = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(build.getWorkspace().getRemote(), "results").toString());
+    public boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException {
+        FilePath buildplace = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(workspace.getRemote(), "buildroot").toString());
+        FilePath results = new FilePath(launcher.getChannel(), java.nio.file.Paths.get(workspace.getRemote(), "results").toString());
+        final Map<String,String> envVars = build.getEnvironment(listener);
         String archFlag = "-b";
         if (!buildplace.exists()) {
             buildplace.mkdirs();
@@ -213,16 +215,24 @@ public final class PBuilderWorker extends ChrootWorker {
         }
         
         EnvVars environment = build.getEnvironment(listener);
-        FilePath[] sourcePackageFiles = build.getWorkspace().list(Util.replaceMacro(sourcePackage, environment));
+        FilePath[] sourcePackageFiles = workspace.list(Util.replaceMacro(sourcePackage, environment));
         if (sourcePackageFiles.length != 1) {
             listener.fatalError("Invalid number of source packages specified (must be 1)");
             return false;
         }
         if(archAllLabel != null)
-            if(build.getBuildVariables().containsValue(archAllLabel))
-                archFlag = "-b";
-            else
-                archFlag = "-B";
+            if(archAllLabel.startsWith("__SPECIAL__")) {
+                if(archAllLabel == "__SPECIAL__arch_and_all")
+                    archFlag = "-b";
+                else if(archAllLabel == "_SPECIAL_arch")
+                    archFlag = "-B";
+            }
+            else {
+                if(envVars.containsValue(archAllLabel))
+                    archFlag = "-b";
+                else
+                    archFlag = "-B";
+            }
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--build")
                 .add("--buildplace").add(buildplace.toString())
                 .add("--buildresult").add(results.toString())
@@ -234,7 +244,7 @@ public final class PBuilderWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
+    public boolean installPackages(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException {
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote())
@@ -285,13 +295,13 @@ public final class PBuilderWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
+    public boolean cleanUp(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall) throws IOException, InterruptedException {
         ArgumentListBuilder a = defaultArgumentList(tarBall, "--clean");
         return launcher.launch().cmds(a).stdout(listener).stderr(listener.getLogger()).join() == 0;
     }
 
     @Override
-    public boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException {
+    public boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall) throws IOException, InterruptedException {
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool())
                 .add("--update")
                 .add("--basetgz").add(tarBall.getRemote());

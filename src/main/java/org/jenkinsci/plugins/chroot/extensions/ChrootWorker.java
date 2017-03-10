@@ -30,6 +30,7 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Node;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
@@ -55,19 +56,19 @@ public abstract class ChrootWorker implements ExtensionPoint {
 
     public abstract List<String> getFallbackPackages();
 
-    public abstract boolean cleanUp(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException;
+    public abstract boolean cleanUp(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall) throws IOException, InterruptedException;
 
     public abstract FilePath setUp(ToolInstallation tool, Node node, TaskListener log) throws IOException, InterruptedException;
 
-    public abstract boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException;
+    public abstract boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException;
     
-    public abstract boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException;
+    public abstract boolean perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener, FilePath tarBall, String archAllLabel, String sourcePackage) throws IOException, InterruptedException;
 
-    public abstract boolean installPackages(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException;
+    public abstract boolean installPackages(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall, List<String> packages, boolean forceInstall) throws IOException, InterruptedException;
 
     public abstract boolean addRepositories(FilePath tarBall, Launcher launcher, TaskListener log, List<Repository> Repositories) throws IOException, InterruptedException;
 
-    public abstract boolean updateRepositories(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall) throws IOException, InterruptedException;
+    public abstract boolean updateRepositories(Run<?, ?> build, Launcher launcher, TaskListener listener, FilePath tarBall) throws IOException, InterruptedException;
 
     public static ExtensionList<ChrootWorker> all() {
         return Jenkins.getInstance().getExtensionList(ChrootWorker.class);

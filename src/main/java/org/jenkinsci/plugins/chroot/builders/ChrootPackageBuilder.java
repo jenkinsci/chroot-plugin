@@ -29,80 +29,112 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
-import hudson.matrix.MatrixProject;
-import hudson.model.AbstractBuild;
+import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.AutoCompletionCandidates;
-import hudson.model.BuildListener;
-import hudson.model.FreeStyleProject;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.ListBoxModel.Option;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+import javax.annotation.CheckForNull;
 import javax.servlet.ServletException;
-import org.apache.commons.io.FileUtils;
+import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.chroot.tools.ChrootToolset;
 import org.jenkinsci.plugins.chroot.util.ChrootUtil;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 /**
  *
  * @author roman
  */
-public class ChrootPackageBuilder extends Builder implements Serializable {
+public class ChrootPackageBuilder extends Builder implements Serializable, SimpleBuildStep {
 
-    private String chrootName;
+    private final String chrootName;
     private String archAllLabel;
     private boolean ignoreExit;
-    private List<String> packagesFromFile;
     private boolean clear;
-    private String sourcePackage;
+    private final String sourcePackage;
     private boolean noUpdate;
     private boolean forceInstall;
+    private String archAllBehaviour;
 
+    @DataBoundSetter
+    public void setForceInstall(boolean forceInstall) {
+        this.forceInstall = forceInstall;
+    }
+    
     public boolean isForceInstall() {
         return forceInstall;
     }
 
+    @DataBoundSetter
+    public void setNoUpdate(boolean noUpdate) {
+        this.noUpdate = noUpdate;
+    }
+    
     public boolean isNoUpdate() {
         return noUpdate;
     }
-
+    
     @DataBoundConstructor
-    public ChrootPackageBuilder(String chrootName, String archAllLabel, boolean ignoreExit, boolean clear,
-            String sourcePackage, boolean noUpdate, boolean forceInstall) throws IOException {
-        this.chrootName = chrootName;
-        this.archAllLabel = archAllLabel;
-        this.ignoreExit = ignoreExit;
-        this.clear = clear;
-        this.sourcePackage = sourcePackage;
-        this.noUpdate = noUpdate;
-        this.forceInstall = forceInstall;
+    public ChrootPackageBuilder(@CheckForNull String chrootName, @CheckForNull String sourcePackage) throws IOException {
+        this.chrootName = Util.fixNull(chrootName);
+        this.sourcePackage = Util.fixNull(sourcePackage);
     }
 
     public String getChrootName() {
         return chrootName;
     }
     
+    @DataBoundSetter
+    public void setArchAllLabel(@CheckForNull String archAllLabel) {
+        this.archAllLabel = Util.fixNull(archAllLabel);
+    }
+    
     public String getArchAllLabel() {
         return archAllLabel;
+    }
+    
+    @DataBoundSetter
+    public void setArchAllBehaviour(@CheckForNull String archAllBehaviour) {
+        this.archAllBehaviour = Util.fixNull(archAllBehaviour);
+    }
+    
+    public String getArchAllBehaviour() {
+        return Util.fixEmptyAndTrim(archAllBehaviour);
     }
 
     public String getSourcePackage() {
         return sourcePackage;
     }
 
+    @DataBoundSetter
+    public void setIgnoreExit(boolean ignoreExit) {
+        this.ignoreExit = ignoreExit;
+    }
+    
     public boolean isIgnoreExit() {
         return ignoreExit;
     }
 
+    @DataBoundSetter
+    public void setClear(boolean clear) {
+        this.clear = clear;
+    }
+    
     public boolean isClear() {
         return clear;
     }
@@ -115,29 +147,35 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
             this.target = target;
         }
 
+        @Override
         public Void invoke(File source, VirtualChannel channel) throws IOException, InterruptedException {
             FilePath _source = new FilePath(source);
             FilePath _target = new FilePath(new File(target));
             _source.copyTo(_target);
             return null;
         }
+
+        @Override
+        public void checkRoles(RoleChecker rc) throws SecurityException {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+    public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
         ChrootToolset installation = ChrootToolset.getInstallationByName(env.expand(this.chrootName));
-        installation = installation.forNode(build.getBuiltOn(), listener);
+        installation = installation.forNode(workspace.toComputer().getNode(), listener);
         installation = installation.forEnvironment(env);
         if (installation.getHome() == null) {
             listener.fatalError("Installation of chroot environment failed");
             listener.fatalError("Please check if pbuilder is installed on the selected node and that"
                     + " the user, Jenkins uses, cann run pbuilder with sudo.");
-            return false;
+            throw new IOException("Installation of chroot environment failed");
         }
-        FilePath tarBall = new FilePath(build.getBuiltOn().getChannel(), installation.getHome());
+        FilePath tarBall = new FilePath(workspace.toComputer().getNode().getChannel(), installation.getHome());
 
-        FilePath workerTarBall = build.getWorkspace().child(env.expand(this.chrootName)).child(tarBall.getName());
+        FilePath workerTarBall = workspace.child(env.expand(this.chrootName)).child(tarBall.getName());
         workerTarBall.getParent().mkdirs();
 
         // force environment recreation when clear is selected
@@ -145,7 +183,10 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
             boolean ret = installation.getChrootWorker().cleanUp(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Chroot environment cleanup failed");
-                return ret || ignoreExit;
+                if(ignoreExit)
+                    return;
+                else
+                    throw new IOException("Chroot environment cleanup failed");
             }
         }
 
@@ -158,11 +199,18 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
             boolean ret = installation.getChrootWorker().updateRepositories(build, launcher, listener, workerTarBall);
             if (ret == false) {
                 listener.fatalError("Updating repository indices in chroot environment failed.");
-                return ret || ignoreExit;
+                if(ignoreExit)
+                    return;
+                else
+                    throw new IOException("Updating repository indices in chroot environment failed.");
             }
         }
         ChrootUtil.saveDigest(workerTarBall);
-        return ignoreExit || installation.getChrootWorker().perform(build, launcher, listener, workerTarBall, this.archAllLabel, this.sourcePackage);
+        String tempArchAllLabel = this.archAllLabel;
+        if(this.archAllBehaviour != null && this.archAllBehaviour != "")
+            tempArchAllLabel = "__SPECIAL__" + this.archAllBehaviour;
+        if (!installation.getChrootWorker().perform(build, workspace, launcher, listener, workerTarBall, tempArchAllLabel, this.sourcePackage) && !ignoreExit)
+            throw new IOException("Package build failed");
     }
 
     @Extension
@@ -208,6 +256,14 @@ public class ChrootPackageBuilder extends Builder implements Serializable {
                 return FormValidation.warning(StringUtils.join(validationList.listIterator(), "\n"));
             }
             return FormValidation.ok();
+        }
+        
+        public ListBoxModel doFillArchAllBehaviourItems() {
+            return new ListBoxModel(
+                    new Option("Default", null),
+                    new Option("All binaries","all_and_arch"),
+                    new Option("Architecture-specific binaries","arch")
+            );
         }
     }
 }
