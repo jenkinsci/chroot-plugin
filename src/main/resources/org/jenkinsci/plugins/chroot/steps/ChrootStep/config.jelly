@@ -1,6 +1,5 @@
 <!--
  Copyright 2013, Roman Mohr <roman@fenkhuber.at>
- Copyright 2016, Xamarin, Inc
 
  This file is part of Chroot-plugin.
 
@@ -25,21 +24,20 @@
 <f:entry field="clear" title="Clear">
 <f:checkbox />
 </f:entry>
-<f:entry field="sourcePackage" title="Source package">
-<f:textbox/>
+<f:entry field="loginAsRoot" title="Login as root">
+<f:checkbox />
+</f:entry>
+<f:entry field="command" title="Command">
+<f:textarea/>
 </f:entry>
 
 <f:advanced>
-    <j:if test="${it.getClass().canonicalName == 'hudson.matrix.MatrixProject'}">
-        <f:entry field="archAllLabel" title="Primary matrix configuration">
-            <f:textbox/>
-        </f:entry>
-    </j:if>
-    <j:if test="${it.getClass().canonicalName == 'org.jenkinsci.plugins.workflow.cps.Snippetizer'}">
-        <f:entry field="archAllBehaviour" title="Multi-architecture behaviour">
-            <f:select/>
-        </f:entry>
-    </j:if>
+<f:entry field="packagesFile" title="Requirement Files">
+<f:textbox/>
+</f:entry>
+<f:entry field="additionalPackages" title="Requirements">
+<f:textbox/>
+</f:entry>
 <f:entry field="ignoreExit" title="Ignore exit code">
 <f:checkbox />
 </f:entry>
