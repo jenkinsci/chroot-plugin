@@ -38,6 +38,9 @@
 <f:entry field="additionalPackages" title="Requirements">
 <f:textbox/>
 </f:entry>
+<f:entry field="bindMounts" title="Bind mounts (pbuilder only)">
+<f:textbox/>
+</f:entry>
 <f:entry field="ignoreExit" title="Ignore exit code">
 <f:checkbox />
 </f:entry>

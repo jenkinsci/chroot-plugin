@@ -156,7 +156,7 @@ public final class PBuilderWorker extends ChrootWorker {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, boolean runAsRoot) throws IOException, InterruptedException {
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, FilePath tarBall, String commands, String bindMounts, boolean runAsRoot) throws IOException, InterruptedException {
         String userName = super.getUserName(launcher);
         String groupName = super.getGroupName(launcher, userName);
         String userHome = build.getWorkspace().getRemote();
@@ -183,8 +183,16 @@ public final class PBuilderWorker extends ChrootWorker {
         String setup_command = shebang + create_group + create_user + run_script;
         FilePath setup_script = build.getWorkspace().createTextTempFile("chroot", ".sh", setup_command);
         ArgumentListBuilder b = new ArgumentListBuilder().add("sudo").add(getTool()).add("--execute")
-                .add("--bindmounts").add(userHome)
-                .add("--basetgz").add(tarBall.getRemote())
+                .add("--bindmounts");
+        if(StringUtils.isEmpty(bindMounts)) {
+            b.add(userHome);
+        }
+        else
+        {
+            StringBuilder allMounts = new StringBuilder().append(userHome).append(" ").append(bindMounts);
+            b.add(allMounts.toString());
+        }
+        b.add("--basetgz").add(tarBall.getRemote())
                 .add("--").add(setup_script);
         int exitCode = launcher.launch().cmds(b).envs(environment).stdout(listener).stderr(listener.getLogger()).join();
         script.delete();
